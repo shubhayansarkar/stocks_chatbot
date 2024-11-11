@@ -6,8 +6,11 @@ from langchain_ollama.chat_models import ChatOllama
 from langchain_ollama.embeddings import OllamaEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.tools import DuckDuckGoSearchResults
-from langchain_core.runnables import RunnableLambda
+from langchain_core.runnables import RunnableLambda, RunnablePassthrough, RunnableParallel
+from langchain_core.prompts import ChatPromptTemplate
 from langchain_chroma.vectorstores import Chroma
+from langchain import hub
+from langchain_core.output_parsers import StrOutputParser
 
 from .logger import logger
 
@@ -65,11 +68,31 @@ except Exception as e:
 
 text_splitter = RecursiveCharacterTextSplitter(chunk_size=128, chunk_overlap=16)
 
+prompt = ChatPromptTemplate.from_messages([
+    ('system', "You are a DuckDuckGo Chatbot who answers user's queries from the search results."),
+    ('human', "Explain the user's query: {query} using the search results: {search}")
+])
 
 
-# Chain
-chain = (
+def embed_documents(chunks: list[str]):
+    vectorstore = Chroma(
+        collection_name = os.urandom(8).hex(),
+        embedding_function = embedding_model,
+        client = chroma_client
+    )
+    vectorstore.add_texts(chunks)
+    return vectorstore
+
+# Chains
+web_scraper = (
     DuckDuckGoSearchResults()
-    | RunnableLambda(text_splitter.split_text, name='Text_Splitter')
-    | RunnableLambda(Chroma())
+    | RunnableLambda(text_splitter.split_text)
+    | RunnableLambda(embed_documents)
+    | RunnablePassthrough.assign(search=RunnableLambda(lambda store: store.as_retriever()))
+)
+    
+rag = (
+    prompt
+    | chat_model
+    | StrOutputParser()
 )

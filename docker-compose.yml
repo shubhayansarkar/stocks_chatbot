@@ -1,0 +1,22 @@
+networks:
+  net:
+    driver: bridge
+
+services:
+  vectorstore:
+    image: chromadb/chroma
+    restart: unless-stopped
+    networks:
+      - net
+    ports:
+      - 8001:8000
+
+  ollama:
+    image: ollama/ollama:latest
+    restart: unless-stopped
+    networks:
+      - net
+    ports:
+      - 11434:11434
+    environment:
+      - OLLAMA_VERBOSE=0

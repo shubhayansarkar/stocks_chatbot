@@ -1,9 +1,9 @@
-import yaml
-import logging.config
+from src.utils import chain
+from src.logger import logger
 
 
 if __name__ == "__main__":
-    with open('logger-config.yml', 'r') as cfg:
-        logging.config.dictConfig(yaml.load(cfg, yaml.SafeLoader))
-        logger = logging.getLogger('devlog')
-        logger.info('loaded logger')
+    with open('graph.png', 'wb') as png:
+        png.write(chain.get_graph().draw_mermaid_png())
+    output = chain.invoke('weather in Kolkata')
+    logger.debug(f"Document Chunks: {len(output)}")

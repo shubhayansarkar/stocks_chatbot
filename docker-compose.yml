@@ -1,24 +1,22 @@
-services:
-  ollama:
-      image: ollama/ollama:latest
-      restart: unless-stopped
-      ports:
-        - 11434:11434
-      volumes:
-        - ./ollama/ollama:/root/.ollama
-        - ./entrypoint.sh:/entrypoint.sh
-      entrypoint: ["/usr/bin/bash", "/entrypoint.sh"]
-      deploy:
-        resources:
-          reservations:
-            devices:
-              - driver: nvidia
-                count: 1
-                capabilities: [gpu]
+networks:
+  net:
+    driver: bridge
 
-  chroma:
-    image: ghcr.io/chroma-core/chroma:latest
-    volumes:
-      - ./chroma:/chroma/.chroma/index
+services:
+  vectorstore:
+    image: chromadb/chroma
+    restart: unless-stopped
+    networks:
+      - net
     ports:
-      - 8000:8000
+      - 8001:8000
+
+  ollama:
+    image: ollama/ollama:latest
+    restart: unless-stopped
+    networks:
+      - net
+    ports:
+      - 11434:11434
+    environment:
+      - OLLAMA_VERBOSE=0
